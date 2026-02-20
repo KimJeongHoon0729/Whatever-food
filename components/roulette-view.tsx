@@ -6,17 +6,6 @@ import { TacoMascot, SparkleIcon, HeartIcon } from "@/components/cute-mascots"
 
 const STORAGE_KEY = "whatever-roulette-foods"
 
-const DEFAULT_FOODS = [
-  "김치찌개",
-  "짜장면",
-  "초밥",
-  "파스타",
-  "떡볶이",
-  "치킨",
-  "비빔밥",
-  "라멘",
-]
-
 const WHEEL_COLORS = [
   "#F5B7B1", // soft pink
   "#FDEBD0", // cream
@@ -47,13 +36,13 @@ function loadFromStorage(): { foods: string[]; checkedFoods: string[] } | null {
       ? (storedChecked as unknown[]).filter((c): c is string => typeof c === "string")
       : []
     const checkedFiltered = foodsList.length > 0 ? checkedList.filter((c) => foodsList.includes(c)) : []
-    const finalFoods = foodsList.length > 0 ? foodsList : DEFAULT_FOODS
+    const finalFoods = foodsList
     const finalChecked =
       foodsList.length > 0
         ? checkedFiltered.length > 0
           ? checkedFiltered
           : foodsList
-        : DEFAULT_FOODS
+        : []
     return { foods: finalFoods, checkedFoods: finalChecked }
   } catch {
     return null

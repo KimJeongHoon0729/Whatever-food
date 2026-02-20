@@ -11,12 +11,14 @@ import { Onboarding, useOnboarding } from "@/components/onboarding"
 type Tab = "filter" | "roulette"
 
 const DEFAULT_TAB_KEY = "whatever-default-tab"
+const ROULETTE_STORAGE_KEY = "whatever-roulette-foods"
 
 export default function Home() {
   const { show: showOnboarding, dismiss: dismissOnboarding, resetOnboarding } = useOnboarding()
   const [activeTab, setActiveTab] = useState<Tab>("filter")
   const [showSettings, setShowSettings] = useState(false)
   const [defaultTab, setDefaultTab] = useState<Tab>("filter")
+  const [rouletteFoods, setRouletteFoods] = useState<string[]>([])
 
   // 앱 시작 시 저장된 기본 탭 불러오기
   useEffect(() => {
@@ -29,17 +31,25 @@ export default function Home() {
     } catch { /* ignore */ }
   }, [])
 
+  // 룰렛 메뉴 목록 — 마운트 시 localStorage에서 복원
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(ROULETTE_STORAGE_KEY)
+      if (!raw) return
+      const data = JSON.parse(raw) as { foods?: unknown }
+      if (data?.foods && Array.isArray(data.foods)) {
+        const list = (data.foods as unknown[]).filter((f): f is string => typeof f === "string")
+        if (list.length > 0) setRouletteFoods(list)
+      }
+    } catch { /* ignore */ }
+  }, [])
+
   const handleSetDefaultTab = (tab: Tab) => {
     setDefaultTab(tab)
     try {
       window.localStorage.setItem(DEFAULT_TAB_KEY, tab)
     } catch { /* ignore */ }
   }
-
-  // 룰렛 메뉴 목록 — 공유 상태 (filter → roulette 방향)
-  const [rouletteFoods, setRouletteFoods] = useState<string[]>([
-    "김치찌개", "짜장면", "초밥", "파스타", "떡볶이", "치킨", "비빔밥", "라멘",
-  ])
 
   const addToRoulette = useCallback((foodName: string) => {
     setRouletteFoods((prev) =>
