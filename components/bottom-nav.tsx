@@ -21,7 +21,7 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
               ? "text-primary"
               : "text-muted-foreground hover:text-foreground"
           }`}
-          aria-label="조건 뽑기"
+          aria-label="Whatever 추천"
         >
           <div className="relative">
             <Shuffle
@@ -33,7 +33,7 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
               <SparkleIcon size={8} className="absolute -right-1.5 -top-1.5 text-primary animate-pulse" />
             )}
           </div>
-          <span className="text-[10px] font-bold">{"조건 뽑기"}</span>
+          <span className="text-[10px] font-bold">{"Whatever 추천"}</span>
           {activeTab === "filter" && (
             <div className="absolute bottom-0 h-[3px] w-10 rounded-full bg-primary" />
           )}

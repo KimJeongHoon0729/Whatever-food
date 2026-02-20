@@ -1,10 +1,21 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, Trash2, Shuffle } from "lucide-react"
 import { TacoMascot, SparkleIcon, HeartIcon } from "@/components/cute-mascots"
 
 const STORAGE_KEY = "whatever-roulette-foods"
+
+const DEFAULT_FOODS = [
+  "김치찌개",
+  "짜장면",
+  "초밥",
+  "파스타",
+  "떡볶이",
+  "치킨",
+  "비빔밥",
+  "라멘",
+]
 
 const WHEEL_COLORS = [
   "#F5B7B1", // soft pink
@@ -36,53 +47,50 @@ function loadFromStorage(): { foods: string[]; checkedFoods: string[] } | null {
       ? (storedChecked as unknown[]).filter((c): c is string => typeof c === "string")
       : []
     const checkedFiltered = foodsList.length > 0 ? checkedList.filter((c) => foodsList.includes(c)) : []
-    const finalFoods = foodsList
+    const finalFoods = foodsList.length > 0 ? foodsList : DEFAULT_FOODS
     const finalChecked =
       foodsList.length > 0
         ? checkedFiltered.length > 0
           ? checkedFiltered
           : foodsList
-        : []
+        : DEFAULT_FOODS
     return { foods: finalFoods, checkedFoods: finalChecked }
   } catch {
     return null
   }
 }
 
-export default function RouletteView() {
-  const [foods, setFoods] = useState<string[]>([])
-  const [checkedFoods, setCheckedFoods] = useState<Set<string>>(new Set())
+interface RouletteViewProps {
+  foods: string[]
+  onFoodsChange: (foods: string[]) => void
+  onGoToFilter: (foodName: string) => void
+}
+
+export default function RouletteView({ foods, onFoodsChange, onGoToFilter }: RouletteViewProps) {
+  const [checkedFoods, setCheckedFoods] = useState<Set<string>>(new Set(foods))
   const [newFood, setNewFood] = useState("")
   const [isSpinning, setIsSpinning] = useState(false)
   const [rotation, setRotation] = useState(0)
   const [winner, setWinner] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const hasLoadedFromStorage = useRef(false)
 
-  // Hydration-safe: load from localStorage only after mount (client)
+  // foods prop이 바뀌면 (필터에서 추가) checkedFoods에 새 항목 자동 체크
   useEffect(() => {
-    const loaded = loadFromStorage()
-    if (loaded) {
-      setFoods(loaded.foods)
-      setCheckedFoods(new Set(loaded.checkedFoods))
-    }
-    hasLoadedFromStorage.current = true
-  }, [])
+    setCheckedFoods((prev) => {
+      const next = new Set(prev)
+      foods.forEach((f) => next.add(f))
+      return next
+    })
+  }, [foods])
 
-  // Persist to localStorage whenever foods or checkedFoods change (after initial load)
+  // localStorage 동기화 (checkedFoods 상태만)
   useEffect(() => {
-    if (!hasLoadedFromStorage.current) return
     try {
       window.localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({
-          foods,
-          checkedFoods: Array.from(checkedFoods),
-        })
+        JSON.stringify({ foods, checkedFoods: Array.from(checkedFoods) })
       )
-    } catch {
-      // ignore quota / private mode errors
-    }
+    } catch { /* ignore */ }
   }, [foods, checkedFoods])
 
   const activeFoods = foods.filter((f) => checkedFoods.has(f))
@@ -90,7 +98,7 @@ export default function RouletteView() {
   const addFood = () => {
     const trimmed = newFood.trim()
     if (trimmed && !foods.includes(trimmed)) {
-      setFoods((prev) => [...prev, trimmed])
+      onFoodsChange([...foods, trimmed])
       setCheckedFoods((prev) => new Set([...prev, trimmed]))
       setNewFood("")
       inputRef.current?.focus()
@@ -98,7 +106,7 @@ export default function RouletteView() {
   }
 
   const removeFood = (food: string) => {
-    setFoods((prev) => prev.filter((f) => f !== food))
+    onFoodsChange(foods.filter((f) => f !== food))
     setCheckedFoods((prev) => {
       const next = new Set(prev)
       next.delete(food)
@@ -151,7 +159,7 @@ export default function RouletteView() {
       <div className="flex flex-col items-center gap-2 rounded-3xl bg-card p-5 border border-border shadow-sm">
         <TacoMascot size={52} className="animate-[bounce_3s_ease-in-out_infinite]" />
         <h2 className="text-xl font-extrabold text-foreground">
-          {"내 맛집 룰렛"}
+          {"룰렛 돌리기"}
         </h2>
         <p className="text-xs font-medium text-muted-foreground text-center">
           {"고민 끝! 돌려서 정하자!"}
@@ -251,9 +259,16 @@ export default function RouletteView() {
             </p>
             <SparkleIcon size={12} className="text-primary-foreground/60" />
           </div>
-          <p className="text-2xl font-extrabold text-primary-foreground">
+          <p className="text-2xl font-extrabold text-primary-foreground mb-3">
             {winner}
           </p>
+          <button
+            onClick={() => onGoToFilter(winner)}
+            className="flex items-center justify-center gap-1.5 mx-auto rounded-xl bg-primary-foreground/15 hover:bg-primary-foreground/25 px-4 py-2 text-xs font-bold text-primary-foreground transition-all active:scale-95"
+          >
+            <Shuffle className="h-3.5 w-3.5" />
+            {"필터에서 비슷한 메뉴 찾기"}
+          </button>
         </div>
       )}
 

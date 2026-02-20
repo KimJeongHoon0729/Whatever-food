@@ -1,7 +1,7 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { X } from "lucide-react"
+import { useMemo, useState, useEffect } from "react"
+import { X, RotateCw, CheckCircle2 } from "lucide-react"
 import { DumplingMascot, BowlMascot, SparkleIcon, HeartIcon } from "@/components/cute-mascots"
 
 // ✅ 1) Taste 타입 — 의미있는 태그만 유지 (1개짜리 희귀 태그 제거)
@@ -492,7 +492,19 @@ const TASTE_ICON: Partial<Record<Taste, string>> = {
   비건: "🌱",
 }
 
-export default function FilterView() {
+interface FilterViewProps {
+  onAddToRoulette: (foodName: string) => void
+  roulettefoods: string[]
+  highlightFood: string | null
+  onClearHighlight: () => void
+}
+
+export default function FilterView({
+  onAddToRoulette,
+  roulettefoods,
+  highlightFood,
+  onClearHighlight,
+}: FilterViewProps) {
   const [selectedFoods, setSelectedFoods] = useState<string[]>([])
   const [selectedTastes, setSelectedTastes] = useState<Taste[]>([])
   const [showModal, setShowModal] = useState(false)
@@ -505,6 +517,29 @@ export default function FilterView() {
   const [isAnimating, setIsAnimating] = useState(false)
   const [isRevealing, setIsRevealing] = useState(false)
   const [rollingText, setRollingText] = useState("")
+  const [addedToRoulette, setAddedToRoulette] = useState<string | null>(null)
+  const [fromRouletteBanner, setFromRouletteBanner] = useState<string | null>(null)
+
+  // 룰렛에서 넘어왔을 때: 해당 메뉴의 카테고리/맛 자동 하이라이트
+  useEffect(() => {
+    if (!highlightFood) return
+    setFromRouletteBanner(highlightFood)
+
+    // FOOD_DB에서 해당 메뉴 찾아서 카테고리 자동 선택
+    for (const [cat, items] of Object.entries(FOOD_DB)) {
+      const found = items.find((item) => item.name === highlightFood)
+      if (found) {
+        setSelectedFoods([cat])
+        setSelectedTastes(found.tastes.slice(0, 2)) // 첫 2개 맛 태그 자동 선택
+        break
+      }
+    }
+
+    onClearHighlight()
+    // 배너 3초 후 자동 제거
+    const t = window.setTimeout(() => setFromRouletteBanner(null), 4000)
+    return () => window.clearTimeout(t)
+  }, [highlightFood, onClearHighlight])
 
   const FOOD_TYPES = useMemo(() => {
     return Object.keys(FOOD_DB).map((label) => ({
@@ -625,6 +660,18 @@ export default function FilterView() {
           {"조건을 골라보세요, 나머지는 Whatever이 골라줄게!"}
         </p>
       </div>
+
+      {/* 룰렛에서 넘어왔을 때 배너 */}
+      {fromRouletteBanner && (
+        <div className="animate-in slide-in-from-top-2 fade-in-0 duration-300 flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/8 px-4 py-3">
+          <RotateCw className="h-4 w-4 shrink-0 text-primary" />
+          <p className="text-xs font-bold text-primary flex-1">
+            <span className="font-extrabold">"{fromRouletteBanner}"</span>
+            {" 와 비슷한 메뉴를 찾아볼게요!"}
+          </p>
+          <button onClick={() => setFromRouletteBanner(null)} className="text-primary/50 hover:text-primary text-xs font-bold">✕</button>
+        </div>
+      )}
 
       <section>
         <div className="mb-3 flex items-center gap-1.5">
@@ -780,7 +827,33 @@ export default function FilterView() {
               {isRevealing ? "\u00a0" : "맛있게 먹어요!"}
             </p>
 
-            <div className="mt-6 flex gap-2">
+            {/* 룰렛에 추가 버튼 */}
+            {!isRevealing && recommendation.name && (
+              <button
+                onClick={() => {
+                  onAddToRoulette(recommendation.name)
+                  setAddedToRoulette(recommendation.name)
+                  window.setTimeout(() => setAddedToRoulette(null), 2000)
+                }}
+                className="mt-4 w-full flex items-center justify-center gap-1.5 rounded-xl border-2 border-primary/20 bg-primary/5 px-4 py-2.5 text-sm font-bold text-primary transition-all hover:bg-primary/10 active:scale-95"
+              >
+                {addedToRoulette === recommendation.name ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    {"룰렛에 추가됨!"}
+                  </>
+                ) : (
+                  <>
+                    <RotateCw className="h-4 w-4" />
+                    {roulettefoods.includes(recommendation.name)
+                      ? "이미 룰렛에 있어요"
+                      : "룰렛에 추가하기"}
+                  </>
+                )}
+              </button>
+            )}
+
+            <div className="mt-3 flex gap-2">
               <button
                 onClick={() => setShowModal(false)}
                 className="flex-1 rounded-xl border-2 border-border bg-card px-4 py-3 text-sm font-bold text-card-foreground transition-all hover:bg-muted active:scale-95"
