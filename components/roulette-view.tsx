@@ -121,13 +121,12 @@ export default function RouletteView() {
 
         {/* Wheel */}
         <div
-          className="relative h-60 w-60 rounded-full shadow-xl border-[5px] border-card overflow-hidden"
+          className="relative h-60 w-60 rounded-full border-[5px] border-card overflow-hidden shadow-[0_8px_32px_rgba(232,146,138,0.2),inset_0_0_0_2px_rgba(232,146,138,0.15)]"
           style={{
             transform: `rotate(${rotation}deg)`,
             transition: isSpinning
               ? "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)"
               : "none",
-            boxShadow: "0 8px 32px rgba(232,146,138,0.2), inset 0 0 0 2px rgba(232,146,138,0.15)",
           }}
         >
           {activeFoods.length > 0 ? (
@@ -163,9 +162,7 @@ export default function RouletteView() {
                       textAnchor="middle"
                       dominantBaseline="middle"
                       transform={`rotate(${textRotation}, ${textX}, ${textY})`}
-                      fill="#4A3728"
-                      fontWeight="bold"
-                      style={{ fontSize: activeFoods.length > 6 ? "7px" : "9px" }}
+                      className={`font-bold fill-[#4A3728] ${activeFoods.length > 6 ? "text-[7px]" : "text-[9px]"}`}
                     >
                       {food.length > 5 ? food.slice(0, 5) + "..." : food}
                     </text>
