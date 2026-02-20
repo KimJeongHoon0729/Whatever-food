@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Nunito_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { PWARegister } from '@/app/components/pwa-register'
 import './globals.css'
 
 const nunitoSans = Nunito_Sans({ subsets: ["latin"], variable: "--font-sans", weight: ["400", "600", "700", "800", "900"] });
@@ -46,6 +47,7 @@ export default function RootLayout({
       <body className={`${nunitoSans.variable} font-sans antialiased`}>
         {children}
         <Analytics />
+        <PWARegister />
       </body>
     </html>
   )
