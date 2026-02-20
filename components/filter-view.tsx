@@ -503,6 +503,8 @@ export default function FilterView() {
     category: "",
   })
   const [isAnimating, setIsAnimating] = useState(false)
+  const [isRevealing, setIsRevealing] = useState(false)
+  const [rollingText, setRollingText] = useState("")
 
   const FOOD_TYPES = useMemo(() => {
     return Object.keys(FOOD_DB).map((label) => ({
@@ -547,6 +549,29 @@ export default function FilterView() {
     setSelectedTastes((prev) => (prev.includes(taste) ? prev.filter((t) => t !== taste) : [...prev, taste]))
   }
 
+  // 현재 조건(카테고리 + 맛)으로 나올 수 있는 총 메뉴 수
+  const matchCount = useMemo(() => {
+    const categories = selectedFoods.length > 0 ? selectedFoods : FOOD_TYPES.map((f) => f.label)
+    let pool = categories.flatMap((cat) => FOOD_DB[cat] || [])
+    if (selectedTastes.length > 0) {
+      const filtered = pool.filter((item) => selectedTastes.some((t) => item.tastes.includes(t)))
+      if (filtered.length > 0) pool = filtered
+    }
+    return pool.length
+  }, [selectedFoods, selectedTastes, FOOD_TYPES])
+
+  // 특정 맛 태그를 추가했을 때의 예상 메뉴 수 (미리보기용)
+  const getCountWithTaste = (taste: Taste): number => {
+    const categories = selectedFoods.length > 0 ? selectedFoods : FOOD_TYPES.map((f) => f.label)
+    const pool = categories.flatMap((cat) => FOOD_DB[cat] || [])
+    const nextTastes = selectedTastes.includes(taste)
+      ? selectedTastes.filter((t) => t !== taste)
+      : [...selectedTastes, taste]
+    if (nextTastes.length === 0) return pool.length
+    const filtered = pool.filter((item) => nextTastes.some((t) => item.tastes.includes(t)))
+    return filtered.length > 0 ? filtered.length : pool.length
+  }
+
   const getRecommendation = () => {
     const categories = selectedFoods.length > 0 ? selectedFoods : FOOD_TYPES.map((f) => f.label)
 
@@ -562,10 +587,30 @@ export default function FilterView() {
     if (pool.length === 0) return
 
     const picked = pool[Math.floor(Math.random() * pool.length)]
-    setRecommendation(picked)
-    setIsAnimating(true)
+
+    // 두구두구: 모달 먼저 열고, 랜덤 메뉴 이름 빠르게 굴리다가 reveal
+    setIsRevealing(true)
+    setRollingText(pool[0].name)
     setShowModal(true)
-    window.setTimeout(() => setIsAnimating(false), 600)
+
+    let tick = 0
+    const totalTicks = 14
+    const interval = window.setInterval(() => {
+      const randomItem = pool[Math.floor(Math.random() * pool.length)]
+      setRollingText(randomItem.name)
+      tick++
+      if (tick >= totalTicks) {
+        window.clearInterval(interval)
+        // 마지막: 실제 선택된 메뉴 reveal
+        window.setTimeout(() => {
+          setRecommendation(picked)
+          setRollingText(picked.name)
+          setIsRevealing(false)
+          setIsAnimating(true)
+          window.setTimeout(() => setIsAnimating(false), 600)
+        }, 120)
+      }
+    }, 80)
   }
 
   return (
@@ -610,20 +655,33 @@ export default function FilterView() {
           <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{"맛"}</h2>
         </div>
         <div className="flex flex-wrap gap-2">
-          {TASTE_TYPES.map(({ label, icon }) => (
-            <button
-              key={label}
-              onClick={() => toggleTaste(label)}
-              className={`flex items-center gap-1.5 rounded-full border-2 px-3.5 py-2 text-sm font-bold transition-all active:scale-95 ${
-                selectedTastes.includes(label)
-                  ? "border-accent bg-accent text-accent-foreground shadow-md shadow-accent/20"
-                  : "border-border bg-card text-card-foreground hover:border-accent/40 hover:bg-muted"
-              }`}
-            >
-              <span className="text-base">{icon}</span>
-              <span>{label}</span>
-            </button>
-          ))}
+          {TASTE_TYPES.map(({ label, icon }) => {
+            const isSelected = selectedTastes.includes(label)
+            const count = getCountWithTaste(label)
+            return (
+              <button
+                key={label}
+                onClick={() => toggleTaste(label)}
+                className={`flex items-center gap-1.5 rounded-full border-2 px-3.5 py-2 text-sm font-bold transition-all active:scale-95 ${
+                  isSelected
+                    ? "border-accent bg-accent text-accent-foreground shadow-md shadow-accent/20"
+                    : "border-border bg-card text-card-foreground hover:border-accent/40 hover:bg-muted"
+                }`}
+              >
+                <span className="text-base">{icon}</span>
+                <span>{label}</span>
+                <span
+                  className={`ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-extrabold tabular-nums ${
+                    isSelected
+                      ? "bg-accent-foreground/20 text-accent-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            )
+          })}
         </div>
       </section>
 
@@ -646,15 +704,21 @@ export default function FilterView() {
         </div>
       )}
 
-      <button
-        onClick={getRecommendation}
-        className="group relative mx-auto w-full max-w-xs overflow-hidden rounded-2xl bg-primary px-6 py-4 text-base font-extrabold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30 active:scale-[0.97]"
-      >
-        <span className="relative z-10 flex items-center justify-center gap-2">
-          <HeartIcon size={18} className="transition-transform group-hover:scale-110" />
-          {"메뉴 추천받기"}
-        </span>
-      </button>
+      <div className="flex flex-col items-center gap-2">
+        <p className="text-xs font-bold text-muted-foreground tabular-nums">
+          <span className="text-primary font-extrabold">{matchCount}개</span>{"의 메뉴 중에서 골라줄게요"}
+        </p>
+        <button
+          onClick={getRecommendation}
+          disabled={isRevealing}
+          className="group relative w-full max-w-xs overflow-hidden rounded-2xl bg-primary px-6 py-4 text-base font-extrabold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30 active:scale-[0.97] disabled:opacity-80 disabled:cursor-not-allowed"
+        >
+          <span className="relative z-10 flex items-center justify-center gap-2">
+            <HeartIcon size={18} className={isRevealing ? "animate-spin" : "transition-transform group-hover:scale-110"} />
+            {isRevealing ? "고르는 중..." : "메뉴 추천받기"}
+          </span>
+        </button>
+      </div>
 
       {showModal && (
         <div
@@ -683,13 +747,26 @@ export default function FilterView() {
             </div>
 
             <div className="mb-3 flex justify-center">
-              <span className="text-6xl block animate-bounce">{recommendation.emoji}</span>
+              <span className={`text-6xl block ${isRevealing ? "animate-pulse" : "animate-bounce"}`}>
+                {isRevealing ? "🎲" : recommendation.emoji}
+              </span>
             </div>
 
-            <p className="text-xs font-bold text-muted-foreground tracking-wide">{"오늘의 추천 메뉴는..."}</p>
-            <h3 className="mt-2 text-3xl font-extrabold text-foreground">{recommendation.name}</h3>
+            <p className="text-xs font-bold text-muted-foreground tracking-wide">
+              {isRevealing ? "두구두구두구..." : "오늘의 추천 메뉴는..."}
+            </p>
+            <h3
+              className={`mt-2 text-3xl font-extrabold transition-all ${
+                isRevealing
+                  ? "text-muted-foreground blur-[2px] scale-95"
+                  : "text-foreground blur-0 scale-100"
+              }`}
+              style={{ transition: isRevealing ? "none" : "all 0.3s ease-out" }}
+            >
+              {isRevealing ? rollingText : recommendation.name}
+            </h3>
 
-            {recommendation.tastes.length > 0 && (
+            {!isRevealing && recommendation.tastes.length > 0 && (
               <div className="mt-2 flex flex-wrap justify-center gap-1">
                 {recommendation.tastes.map((t) => (
                   <span key={t} className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
@@ -699,7 +776,9 @@ export default function FilterView() {
               </div>
             )}
 
-            <p className="mt-1 text-xs text-muted-foreground">{"맛있게 먹어요!"}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {isRevealing ? "\u00a0" : "맛있게 먹어요!"}
+            </p>
 
             <div className="mt-6 flex gap-2">
               <button
@@ -710,9 +789,10 @@ export default function FilterView() {
               </button>
               <button
                 onClick={getRecommendation}
-                className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-md shadow-primary/20 transition-all hover:shadow-lg active:scale-95"
+                disabled={isRevealing}
+                className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-md shadow-primary/20 transition-all hover:shadow-lg active:scale-95 disabled:opacity-60"
               >
-                {"다른 거!"}
+                {isRevealing ? "..." : "다른 거!"}
               </button>
             </div>
           </div>
