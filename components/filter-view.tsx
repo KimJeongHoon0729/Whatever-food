@@ -620,27 +620,20 @@ export default function FilterView({
   // - 맛 미선택 시: 해당 맛이 붙은 메뉴 수
   // - 맛 선택 시(해당 버튼 포함): 현재 선택한 맛 조건에 맞는 메뉴 수 (종류 전체 X)
   const tasteCountMap = useMemo(() => {
+    // 1. 현재 선택된 카테고리(음식 종류)의 메뉴 풀만 가져옵니다.
     const categories = selectedFoods.length > 0 ? selectedFoods : FOOD_TYPES.map((f) => f.label)
     const pool = categories.flatMap((cat) => FOOD_DB[cat] || [])
+    
     const map: Partial<Record<Taste, number>> = {}
+    
+    // 2. 풀(pool)을 순회하면서 각 맛 태그가 몇 번 등장하는지 셉니다.
     for (const taste of Object.keys(TASTE_ICON) as Taste[]) {
-      const nextTastes = selectedTastes.includes(taste)
-        ? selectedTastes.filter((t) => t !== taste)
-        : [...selectedTastes, taste]
-      if (nextTastes.length === 0) {
-        // 선택된 맛 버튼: 현재 선택한 맛 조건에 맞는 메뉴 수
-        const currentMatch = pool.filter((item) =>
-          selectedTastes.some((t) => item.tastes.includes(t))
-        )
-        map[taste] = currentMatch.length
-      } else {
-        // 미선택 맛 버튼: 이 맛이 붙은 메뉴 수 (현재 종류 풀 기준). 없으면 0
-        const filtered = pool.filter((item) => nextTastes.some((t) => item.tastes.includes(t)))
-        map[taste] = filtered.length
-      }
+      // 해당 맛을 가지고 있는 메뉴의 순수 개수
+      const count = pool.filter((item) => item.tastes.includes(taste)).length
+      map[taste] = count
     }
     return map
-  }, [selectedFoods, selectedTastes, FOOD_TYPES])
+  }, [selectedFoods, FOOD_TYPES]) // 🚨 의존성 배열에서 selectedTastes 제거 (맛 선택 시 숫자가 요동치는 것 방지)
 
   const getCountWithTaste = (taste: Taste): number => tasteCountMap[taste] ?? 0
 
