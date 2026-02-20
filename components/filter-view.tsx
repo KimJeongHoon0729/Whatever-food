@@ -579,12 +579,30 @@ export default function FilterView({
 
   const toggleFood = (food: string) => {
     setSelectedFoods((prev) => (prev.includes(food) ? prev.filter((f) => f !== food) : [...prev, food]))
-    btnRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect()
+      const bottomNavHeight = 72
+      const gap = 16
+      const isVisible = rect.bottom <= window.innerHeight - bottomNavHeight - gap
+      if (!isVisible) {
+        const scrollAmount = rect.bottom - (window.innerHeight - bottomNavHeight - gap)
+        window.scrollBy({ top: scrollAmount, behavior: "smooth" })
+      }
+    }
   }
 
   const toggleTaste = (taste: Taste) => {
     setSelectedTastes((prev) => (prev.includes(taste) ? prev.filter((t) => t !== taste) : [...prev, taste]))
-    btnRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect()
+      const bottomNavHeight = 72
+      const gap = 16
+      const isVisible = rect.bottom <= window.innerHeight - bottomNavHeight - gap
+      if (!isVisible) {
+        const scrollAmount = rect.bottom - (window.innerHeight - bottomNavHeight - gap)
+        window.scrollBy({ top: scrollAmount, behavior: "smooth" })
+      }
+    }
   }
 
   // 현재 조건(카테고리 + 맛)으로 나올 수 있는 총 메뉴 수
