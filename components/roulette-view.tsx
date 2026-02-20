@@ -1,8 +1,10 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Plus, Trash2 } from "lucide-react"
 import { TacoMascot, SparkleIcon, HeartIcon } from "@/components/cute-mascots"
+
+const STORAGE_KEY = "whatever-roulette-foods"
 
 const DEFAULT_FOODS = [
   "김치찌개",
@@ -26,6 +28,38 @@ const WHEEL_COLORS = [
   "#D4EFDF", // sage
 ]
 
+function loadFromStorage(): { foods: string[]; checkedFoods: string[] } | null {
+  if (typeof window === "undefined") return null
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const data = JSON.parse(raw) as unknown
+    if (!data || typeof data !== "object" || !Array.isArray((data as { foods?: unknown }).foods))
+      return null
+    const { foods, checkedFoods: storedChecked } = data as {
+      foods: unknown
+      checkedFoods?: unknown
+    }
+    const foodsList = Array.isArray(foods)
+      ? (foods as unknown[]).filter((f): f is string => typeof f === "string")
+      : []
+    const checkedList = Array.isArray(storedChecked)
+      ? (storedChecked as unknown[]).filter((c): c is string => typeof c === "string")
+      : []
+    const checkedFiltered = foodsList.length > 0 ? checkedList.filter((c) => foodsList.includes(c)) : []
+    const finalFoods = foodsList.length > 0 ? foodsList : DEFAULT_FOODS
+    const finalChecked =
+      foodsList.length > 0
+        ? checkedFiltered.length > 0
+          ? checkedFiltered
+          : foodsList
+        : DEFAULT_FOODS
+    return { foods: finalFoods, checkedFoods: finalChecked }
+  } catch {
+    return null
+  }
+}
+
 export default function RouletteView() {
   const [foods, setFoods] = useState<string[]>(DEFAULT_FOODS)
   const [checkedFoods, setCheckedFoods] = useState<Set<string>>(
@@ -36,6 +70,33 @@ export default function RouletteView() {
   const [rotation, setRotation] = useState(0)
   const [winner, setWinner] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const hasLoadedFromStorage = useRef(false)
+
+  // Hydration-safe: load from localStorage only after mount (client)
+  useEffect(() => {
+    const loaded = loadFromStorage()
+    if (loaded) {
+      setFoods(loaded.foods)
+      setCheckedFoods(new Set(loaded.checkedFoods))
+    }
+    hasLoadedFromStorage.current = true
+  }, [])
+
+  // Persist to localStorage whenever foods or checkedFoods change (after initial load)
+  useEffect(() => {
+    if (!hasLoadedFromStorage.current) return
+    try {
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          foods,
+          checkedFoods: Array.from(checkedFoods),
+        })
+      )
+    } catch {
+      // ignore quota / private mode errors
+    }
+  }, [foods, checkedFoods])
 
   const activeFoods = foods.filter((f) => checkedFoods.has(f))
 
