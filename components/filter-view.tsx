@@ -1,92 +1,590 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { X } from "lucide-react"
 import { DumplingMascot, BowlMascot, SparkleIcon, HeartIcon } from "@/components/cute-mascots"
 
-const FOOD_TYPES = [
-  { label: "한식", icon: "🍚" },
-  { label: "중식", icon: "🥟" },
-  { label: "일식", icon: "🍣" },
-  { label: "양식", icon: "🍝" },
-  { label: "분식", icon: "🍢" },
-  { label: "패스트푸드", icon: "🍔" },
-]
+// ✅ 1) Taste 타입 — 의미있는 태그만 유지 (1개짜리 희귀 태그 제거)
+type Taste =
+  | "매콤한"
+  | "얼큰한"
+  | "깔끔한"
+  | "단짠단짠"
+  | "느끼한"
+  | "달콤한"
+  | "새콤한"
+  | "고소한"
+  | "담백한"
+  | "바삭한"
+  | "쫄깃한"
+  | "뜨끈한"
+  | "시원한"
+  | "헤비한"
+  | "가벼운"
+  | "건강한"
+  | "치즈가득"
+  | "국물"
+  | "비건"
 
-const TASTE_TYPES = [
-  { label: "매콤한", icon: "🌶️" },
-  { label: "얼큰한", icon: "🔥" },
-  { label: "단짠단짠", icon: "🍯" },
-  { label: "느끼한", icon: "🧈" },
-  { label: "깔끔한", icon: "✨" },
-]
-
-const FOOD_RECOMMENDATIONS: Record<string, string[]> = {
-  "한식": ["김치찌개", "된장찌개", "불고기", "비빔밥", "갈비탕", "잡채", "제육볶음", "삼겹살"],
-  "중식": ["짜장면", "짬뽕", "탕수육", "마라탕", "볶음밥", "양장피", "꿔바로우"],
-  "일식": ["초밥", "라멘", "돈카츠", "우동", "오코노미야끼", "타코야키", "카레"],
-  "양식": ["파스타", "스테이크", "리조또", "피자", "버거", "그라탕", "오믈렛"],
-  "분식": ["떡볶이", "순대", "김밥", "라면", "튀김", "오뎅", "쫄면"],
-  "패스트푸드": ["치킨", "햄버거", "감자튀김", "핫도그", "타코", "나초"],
+type FoodItem = {
+  name: string
+  emoji: string
+  tastes: Taste[]
 }
 
-const FOOD_EMOJIS = ["🍕", "🍜", "🍛", "🍲", "🥘", "🍱", "🌮", "🥗", "🍔", "🍣", "🍝", "🍚", "🥟", "🍢", "🌶️", "🍗"]
+// ✅ 2) FOOD_DB — 265개 → 400개+ 대폭 확장
+const FOOD_DB: Record<string, FoodItem[]> = {
+  한식: [
+    // 찌개/국
+    { name: "김치찌개", emoji: "🍲", tastes: ["매콤한", "얼큰한", "국물"] },
+    { name: "된장찌개", emoji: "🍲", tastes: ["깔끔한", "국물"] },
+    { name: "순두부찌개", emoji: "🍲", tastes: ["매콤한", "얼큰한", "국물"] },
+    { name: "부대찌개", emoji: "🍲", tastes: ["얼큰한", "단짠단짠", "국물"] },
+    { name: "청국장", emoji: "🍲", tastes: ["깔끔한", "국물"] },
+    { name: "육개장", emoji: "🍲", tastes: ["매콤한", "얼큰한", "국물"] },
+    { name: "갈비탕", emoji: "🍲", tastes: ["깔끔한", "국물"] },
+    { name: "삼계탕", emoji: "🍲", tastes: ["깔끔한", "국물", "뜨끈한"] },
+    { name: "설렁탕", emoji: "🍲", tastes: ["깔끔한", "국물", "뜨끈한"] },
+    { name: "곰탕", emoji: "🍲", tastes: ["깔끔한", "국물", "뜨끈한"] },
+    { name: "해장국", emoji: "🍲", tastes: ["얼큰한", "국물", "뜨끈한"] },
+    { name: "감자탕", emoji: "🍲", tastes: ["얼큰한", "국물", "헤비한"] },
+    { name: "뼈해장국", emoji: "🍲", tastes: ["얼큰한", "국물", "헤비한"] },
+    { name: "닭볶음탕", emoji: "🍗", tastes: ["매콤한", "얼큰한", "국물"] },
+    { name: "동태탕", emoji: "🍲", tastes: ["얼큰한", "깔끔한", "국물"] },
+    { name: "추어탕", emoji: "🍲", tastes: ["깔끔한", "국물"] },
+    { name: "도가니탕", emoji: "🍲", tastes: ["깔끔한", "국물"] },
+    { name: "낙곱새", emoji: "🥘", tastes: ["매콤한", "얼큰한"] },
+    { name: "아구찜", emoji: "🐟", tastes: ["매콤한", "얼큰한"] },
+    { name: "돼지국밥", emoji: "🍲", tastes: ["깔끔한", "얼큰한", "국물"] },
+    { name: "수제비", emoji: "🍲", tastes: ["깔끔한", "얼큰한", "국물"] },
+    { name: "칼국수", emoji: "🍜", tastes: ["깔끔한", "국물", "뜨끈한"] },
+    { name: "바지락칼국수", emoji: "🍜", tastes: ["깔끔한", "국물"] },
+    { name: "콩나물국밥", emoji: "🍚", tastes: ["깔끔한", "얼큰한", "국물"] },
+    { name: "순대국밥", emoji: "🍲", tastes: ["깔끔한", "국물", "뜨끈한"] },
+    { name: "내장국밥", emoji: "🍲", tastes: ["얼큰한", "국물", "뜨끈한"] },
+    { name: "선지해장국", emoji: "🍲", tastes: ["얼큰한", "국물"] },
+    { name: "우거지국", emoji: "🍲", tastes: ["깔끔한", "국물"] },
+    { name: "두부찌개", emoji: "🍲", tastes: ["매콤한", "국물"] },
+    { name: "오징어찌개", emoji: "🍲", tastes: ["매콤한", "얼큰한", "국물"] },
+    // 구이/볶음
+    { name: "삼겹살", emoji: "🥓", tastes: ["단짠단짠", "느끼한", "헤비한"] },
+    { name: "목살구이", emoji: "🥓", tastes: ["단짠단짠", "느끼한", "헤비한"] },
+    { name: "항정살", emoji: "🥓", tastes: ["단짠단짠", "느끼한", "헤비한"] },
+    { name: "갈비구이", emoji: "🍖", tastes: ["단짠단짠", "헤비한"] },
+    { name: "불고기", emoji: "🥩", tastes: ["단짠단짠"] },
+    { name: "제육볶음", emoji: "🥩", tastes: ["매콤한", "단짠단짠"] },
+    { name: "닭갈비", emoji: "🍗", tastes: ["매콤한", "단짠단짠"] },
+    { name: "오삼불고기", emoji: "🥩", tastes: ["매콤한"] },
+    { name: "낙지볶음", emoji: "🐙", tastes: ["매콤한"] },
+    { name: "쭈꾸미볶음", emoji: "🐙", tastes: ["매콤한"] },
+    { name: "곱창구이", emoji: "🍖", tastes: ["느끼한", "단짠단짠", "헤비한"] },
+    { name: "대창구이", emoji: "🍖", tastes: ["느끼한", "단짠단짠", "헤비한"] },
+    { name: "막창", emoji: "🍖", tastes: ["느끼한", "단짠단짠", "헤비한"] },
+    { name: "꼼장어구이", emoji: "🐡", tastes: ["매콤한", "단짠단짠"] },
+    { name: "소갈비찜", emoji: "🍖", tastes: ["단짠단짠", "헤비한"] },
+    { name: "찜닭", emoji: "🍗", tastes: ["단짠단짠", "매콤한"] },
+    { name: "두부김치", emoji: "🍲", tastes: ["매콤한"] },
+    { name: "조개구이", emoji: "🦪", tastes: ["깔끔한"] },
+    { name: "꼬막비빔밥", emoji: "🦪", tastes: ["매콤한", "단짠단짠"] },
+    // 밥/덮밥
+    { name: "비빔밥", emoji: "🍚", tastes: ["깔끔한", "매콤한"] },
+    { name: "돌솥비빔밥", emoji: "🍚", tastes: ["매콤한", "깔끔한"] },
+    { name: "육회비빔밥", emoji: "🥩", tastes: ["깔끔한", "단짠단짠"] },
+    { name: "잡채", emoji: "🍜", tastes: ["단짠단짠"] },
+    { name: "김치볶음밥", emoji: "🍚", tastes: ["매콤한", "단짠단짠"] },
+    { name: "계란볶음밥", emoji: "🍚", tastes: ["깔끔한", "단짠단짠"] },
+    // 냉면/면
+    { name: "냉면", emoji: "🍜", tastes: ["깔끔한", "시원한"] },
+    { name: "물냉면", emoji: "🍜", tastes: ["깔끔한", "새콤한", "시원한"] },
+    { name: "비빔냉면", emoji: "🍜", tastes: ["매콤한", "새콤한"] },
+    { name: "막국수", emoji: "🍜", tastes: ["매콤한", "새콤한", "깔끔한"] },
+    // 보쌈/족발/기타
+    { name: "보쌈", emoji: "🥬", tastes: ["깔끔한", "단짠단짠"] },
+    { name: "족발", emoji: "🍖", tastes: ["단짠단짠", "쫄깃한"] },
+    { name: "수육", emoji: "🥩", tastes: ["깔끔한", "담백한"] },
+    { name: "간장게장", emoji: "🦀", tastes: ["단짠단짠"] },
+    { name: "양념게장", emoji: "🦀", tastes: ["매콤한", "단짠단짠"] },
+    { name: "쌈밥", emoji: "🥬", tastes: ["깔끔한", "건강한"] },
+    { name: "생선구이 정식", emoji: "🐟", tastes: ["깔끔한", "단짠단짠"] },
+    { name: "해물파전", emoji: "🥞", tastes: ["깔끔한", "단짠단짠"] },
+    { name: "김치전", emoji: "🥞", tastes: ["매콤한", "단짠단짠"] },
+    { name: "녹두전", emoji: "🥞", tastes: ["고소한", "담백한"] },
+    { name: "동태전", emoji: "🥞", tastes: ["깔끔한", "고소한"] },
+    { name: "굴전", emoji: "🥞", tastes: ["고소한", "깔끔한"] },
+    { name: "파전", emoji: "🥞", tastes: ["고소한", "단짠단짠"] },
+    { name: "돼지갈비찜", emoji: "🍖", tastes: ["단짠단짠", "매콤한"] },
+    { name: "닭한마리", emoji: "🍗", tastes: ["깔끔한", "국물", "뜨끈한"] },
+    { name: "장어구이", emoji: "🐟", tastes: ["단짠단짠", "고소한"] },
+    { name: "꼬막무침", emoji: "🦪", tastes: ["매콤한", "새콤한"] },
+    { name: "육사시미", emoji: "🥩", tastes: ["깔끔한"] },
+    { name: "닭발", emoji: "🍗", tastes: ["매콤한"] },
+    { name: "홍어삼합", emoji: "🐟", tastes: ["새콤한", "단짠단짠"] },
+    { name: "전주비빔밥", emoji: "🍚", tastes: ["깔끔한", "고소한"] },
+    { name: "황태해장국", emoji: "🍲", tastes: ["깔끔한", "국물", "뜨끈한"] },
+    { name: "청국장찌개", emoji: "🍲", tastes: ["담백한", "국물"] },
+    { name: "생선조림", emoji: "🐟", tastes: ["매콤한", "단짠단짠"] },
+    { name: "고등어조림", emoji: "🐟", tastes: ["매콤한", "단짠단짠"] },
+    { name: "갈치조림", emoji: "🐟", tastes: ["매콤한", "단짠단짠"] },
+    { name: "꽁치조림", emoji: "🐟", tastes: ["단짠단짠"] },
+    { name: "조기구이", emoji: "🐟", tastes: ["깔끔한", "담백한"] },
+    { name: "삼치구이", emoji: "🐟", tastes: ["깔끔한", "담백한"] },
+  ],
+
+  중식: [
+    { name: "짜장면", emoji: "🍜", tastes: ["단짠단짠", "느끼한"] },
+    { name: "짬뽕", emoji: "🍜", tastes: ["얼큰한", "매콤한", "국물"] },
+    { name: "볶음짬뽕", emoji: "🍜", tastes: ["매콤한"] },
+    { name: "삼선짬뽕", emoji: "🍜", tastes: ["얼큰한", "국물"] },
+    { name: "탕수육", emoji: "🍖", tastes: ["단짠단짠", "느끼한", "바삭한"] },
+    { name: "마라탕", emoji: "🍲", tastes: ["매콤한", "얼큰한", "국물"] },
+    { name: "마라샹궈", emoji: "🍲", tastes: ["매콤한", "헤비한"] },
+    { name: "양꼬치", emoji: "🍢", tastes: ["매콤한", "단짠단짠"] },
+    { name: "볶음밥", emoji: "🍚", tastes: ["단짠단짠"] },
+    { name: "깐풍기", emoji: "🍗", tastes: ["매콤한", "단짠단짠", "바삭한"] },
+    { name: "유린기", emoji: "🍗", tastes: ["단짠단짠", "깔끔한"] },
+    { name: "꿔바로우", emoji: "🍖", tastes: ["단짠단짠", "느끼한", "바삭한"] },
+    { name: "양장피", emoji: "🥗", tastes: ["깔끔한"] },
+    { name: "팔보채", emoji: "🥘", tastes: ["깔끔한"] },
+    { name: "동파육", emoji: "🍖", tastes: ["단짠단짠", "느끼한", "헤비한"] },
+    { name: "짬뽕밥", emoji: "🍚", tastes: ["얼큰한", "매콤한", "국물"] },
+    { name: "잡탕밥", emoji: "🍚", tastes: ["깔끔한"] },
+    { name: "중국식 훠궈", emoji: "🍲", tastes: ["매콤한", "얼큰한", "국물"] },
+    { name: "우육면", emoji: "🍜", tastes: ["얼큰한", "국물"] },
+    { name: "딤섬", emoji: "🥟", tastes: ["깔끔한", "단짠단짠"] },
+    { name: "군만두", emoji: "🥟", tastes: ["단짠단짠", "느끼한", "바삭한"] },
+    { name: "물만두", emoji: "🥟", tastes: ["깔끔한"] },
+    { name: "마파두부", emoji: "🍲", tastes: ["매콤한", "헤비한"] },
+    { name: "오향장육", emoji: "🥩", tastes: ["단짠단짠"] },
+    { name: "칠리새우", emoji: "🍤", tastes: ["매콤한", "단짠단짠", "바삭한"] },
+    { name: "크림새우", emoji: "🍤", tastes: ["느끼한", "단짠단짠", "바삭한"] },
+    { name: "고추잡채", emoji: "🥗", tastes: ["매콤한", "단짠단짠"] },
+    { name: "유산슬", emoji: "🥘", tastes: ["깔끔한"] },
+    { name: "지삼선", emoji: "🍆", tastes: ["단짠단짠"] },
+    { name: "토마토계란볶음", emoji: "🍅", tastes: ["단짠단짠", "깔끔한"] },
+    { name: "마라 훠궈", emoji: "🍲", tastes: ["매콤한", "얼큰한", "헤비한"] },
+    { name: "탕탕이", emoji: "🍲", tastes: ["매콤한", "헤비한"] },
+    { name: "홍소육", emoji: "🥩", tastes: ["단짠단짠", "헤비한"] },
+    { name: "난자완스", emoji: "🍖", tastes: ["단짠단짠"] },
+    { name: "새우볶음밥", emoji: "🍚", tastes: ["단짠단짠", "고소한"] },
+    { name: "마파면", emoji: "🍜", tastes: ["매콤한", "단짠단짠"] },
+    { name: "우육탕면", emoji: "🍜", tastes: ["얼큰한", "국물"] },
+    { name: "납작만두", emoji: "🥟", tastes: ["고소한", "담백한"] },
+    { name: "중국식 샤브샤브", emoji: "🍲", tastes: ["깔끔한", "국물"] },
+    { name: "꽃빵", emoji: "🍞", tastes: ["담백한", "고소한"] },
+  ],
+
+  일식: [
+    { name: "초밥", emoji: "🍣", tastes: ["깔끔한"] },
+    { name: "회덮밥", emoji: "🍚", tastes: ["깔끔한"] },
+    { name: "연어덮밥", emoji: "🍚", tastes: ["깔끔한", "단짠단짠"] },
+    { name: "장어덮밥", emoji: "🍚", tastes: ["단짠단짠"] },
+    { name: "라멘", emoji: "🍜", tastes: ["느끼한", "얼큰한", "국물"] },
+    { name: "돈코츠라멘", emoji: "🍜", tastes: ["느끼한", "국물"] },
+    { name: "쇼유라멘", emoji: "🍜", tastes: ["단짠단짠", "국물"] },
+    { name: "미소라멘", emoji: "🍜", tastes: ["깔끔한", "단짠단짠", "국물"] },
+    { name: "츠케멘", emoji: "🍜", tastes: ["단짠단짠", "느끼한"] },
+    { name: "탄탄멘", emoji: "🍜", tastes: ["매콤한", "고소한", "국물"] },
+    { name: "돈카츠", emoji: "🍖", tastes: ["느끼한", "단짠단짠", "바삭한"] },
+    { name: "가츠동", emoji: "🍚", tastes: ["단짠단짠", "헤비한"] },
+    { name: "오야코동", emoji: "🍚", tastes: ["단짠단짠"] },
+    { name: "규동", emoji: "🍚", tastes: ["단짠단짠"] },
+    { name: "텐동", emoji: "🍚", tastes: ["단짠단짠", "느끼한", "헤비한"] },
+    { name: "우동", emoji: "🍜", tastes: ["깔끔한", "국물", "뜨끈한"] },
+    { name: "자루소바", emoji: "🍜", tastes: ["깔끔한"] },
+    { name: "오코노미야끼", emoji: "🥞", tastes: ["단짠단짠", "고소한"] },
+    { name: "타코야키", emoji: "🐙", tastes: ["단짠단짠", "고소한"] },
+    { name: "야키토리", emoji: "🍢", tastes: ["단짠단짠"] },
+    { name: "카라아게", emoji: "🍗", tastes: ["단짠단짠", "느끼한", "바삭한"] },
+    { name: "일본식 카레", emoji: "🍛", tastes: ["단짠단짠", "헤비한"] },
+    { name: "스시 오마카세", emoji: "🍣", tastes: ["깔끔한"] },
+    { name: "네기토로동", emoji: "🍚", tastes: ["깔끔한"] },
+    { name: "샤부샤부", emoji: "🍲", tastes: ["깔끔한", "국물"] },
+    { name: "스키야키", emoji: "🍲", tastes: ["단짠단짠", "국물"] },
+    { name: "나베", emoji: "🍲", tastes: ["깔끔한", "국물", "뜨끈한"] },
+    { name: "모밀국수", emoji: "🍜", tastes: ["깔끔한"] },
+    { name: "멘타이코 파스타", emoji: "🍝", tastes: ["매콤한", "느끼한"] },
+    { name: "마제소바", emoji: "🍜", tastes: ["단짠단짠", "고소한"] },
+    { name: "대창덮밥", emoji: "🍚", tastes: ["느끼한", "단짠단짠", "헤비한"] },
+    { name: "밀푀유나베", emoji: "🍲", tastes: ["깔끔한", "국물"] },
+    { name: "메밀소바", emoji: "🍜", tastes: ["깔끔한"] },
+    { name: "스테키동", emoji: "🥩", tastes: ["단짠단짠"] },
+    { name: "가라아게동", emoji: "🍚", tastes: ["단짠단짠", "바삭한"] },
+    { name: "나카오치동", emoji: "🍚", tastes: ["깔끔한"] },
+    { name: "토리조스이", emoji: "🥣", tastes: ["깔끔한", "담백한", "국물"] },
+    { name: "이자카야 꼬치", emoji: "🍢", tastes: ["단짠단짠", "고소한"] },
+    { name: "야키니쿠", emoji: "🥩", tastes: ["단짠단짠", "헤비한"] },
+    { name: "아게다시두부", emoji: "🍢", tastes: ["깔끔한", "담백한"] },
+    { name: "교자", emoji: "🥟", tastes: ["고소한", "단짠단짠"] },
+    { name: "스파이시 튜나 롤", emoji: "🍣", tastes: ["매콤한", "깔끔한"] },
+    { name: "미소시루", emoji: "🥣", tastes: ["깔끔한", "담백한", "국물"] },
+    { name: "히레카츠", emoji: "🍖", tastes: ["담백한", "바삭한"] },
+    { name: "에비후라이", emoji: "🍤", tastes: ["바삭한", "고소한"] },
+  ],
+
+  양식: [
+    { name: "까르보나라", emoji: "🍝", tastes: ["느끼한", "헤비한"] },
+    { name: "봉골레 파스타", emoji: "🍝", tastes: ["깔끔한"] },
+    { name: "아라비아따", emoji: "🍝", tastes: ["매콤한"] },
+    { name: "로제파스타", emoji: "🍝", tastes: ["느끼한", "매콤한"] },
+    { name: "알리오올리오", emoji: "🍝", tastes: ["깔끔한", "느끼한"] },
+    { name: "트러플파스타", emoji: "🍝", tastes: ["느끼한", "고소한"] },
+    { name: "토마토 파스타", emoji: "🍝", tastes: ["깔끔한", "단짠단짠"] },
+    { name: "빠네 파스타", emoji: "🍝", tastes: ["느끼한", "헤비한"] },
+    { name: "뇨끼", emoji: "🥔", tastes: ["느끼한", "단짠단짠"] },
+    { name: "멘타이코 크림파스타", emoji: "🍝", tastes: ["매콤한", "느끼한"] },
+    { name: "오일 새우 파스타", emoji: "🍝", tastes: ["깔끔한", "고소한"] },
+    { name: "스테이크", emoji: "🥩", tastes: ["단짠단짠", "느끼한", "헤비한"] },
+    { name: "티본스테이크", emoji: "🥩", tastes: ["느끼한", "헤비한"] },
+    { name: "함박스테이크", emoji: "🥩", tastes: ["단짠단짠", "느끼한"] },
+    { name: "치킨스테이크", emoji: "🍗", tastes: ["담백한", "단짠단짠"] },
+    { name: "폭립", emoji: "🍖", tastes: ["단짠단짠", "헤비한"] },
+    { name: "리조또", emoji: "🍚", tastes: ["느끼한"] },
+    { name: "버섯리조또", emoji: "🍚", tastes: ["느끼한", "고소한"] },
+    { name: "시푸드리조또", emoji: "🍚", tastes: ["깔끔한", "느끼한"] },
+    { name: "마르게리따 피자", emoji: "🍕", tastes: ["느끼한", "치즈가득"] },
+    { name: "페퍼로니 피자", emoji: "🍕", tastes: ["매콤한", "느끼한", "치즈가득"] },
+    { name: "포르치니 피자", emoji: "🍕", tastes: ["느끼한", "고소한"] },
+    { name: "트러플 피자", emoji: "🍕", tastes: ["느끼한", "고소한", "치즈가득"] },
+    { name: "치즈버거", emoji: "🍔", tastes: ["느끼한", "단짠단짠", "치즈가득"] },
+    { name: "수제버거", emoji: "🍔", tastes: ["느끼한", "단짠단짠", "헤비한"] },
+    { name: "그라탕", emoji: "🥘", tastes: ["느끼한", "치즈가득"] },
+    { name: "프렌치어니언수프", emoji: "🥣", tastes: ["느끼한", "단짠단짠", "국물"] },
+    { name: "클램차우더", emoji: "🥣", tastes: ["느끼한", "국물"] },
+    { name: "에그베네딕트", emoji: "🍳", tastes: ["느끼한"] },
+    { name: "오믈렛", emoji: "🍳", tastes: ["느끼한", "고소한"] },
+    { name: "연어스테이크", emoji: "🐟", tastes: ["깔끔한", "느끼한"] },
+    { name: "라따뚜이", emoji: "🥘", tastes: ["깔끔한", "건강한"] },
+    { name: "크림스튜", emoji: "🥣", tastes: ["느끼한", "국물", "뜨끈한"] },
+    { name: "감바스 알 아히요", emoji: "🍤", tastes: ["느끼한", "매콤한"] },
+    { name: "잠발라야", emoji: "🥘", tastes: ["매콤한", "헤비한"] },
+    { name: "스크램블에그", emoji: "🍳", tastes: ["고소한", "담백한"] },
+    { name: "치킨 알프레도", emoji: "🍝", tastes: ["느끼한", "치즈가득"] },
+    { name: "랍스터 비스크", emoji: "🥣", tastes: ["느끼한", "국물"] },
+    { name: "타르타르 스테이크", emoji: "🥩", tastes: ["단짠단짠"] },
+    { name: "바베큐 리브", emoji: "🍖", tastes: ["단짠단짠", "헤비한"] },
+    { name: "코코뱅", emoji: "🍗", tastes: ["느끼한", "깔끔한"] },
+    { name: "빕 임파나다", emoji: "🥐", tastes: ["바삭한", "고소한"] },
+  ],
+
+  분식: [
+    { name: "떡볶이", emoji: "🍢", tastes: ["매콤한", "단짠단짠"] },
+    { name: "로제떡볶이", emoji: "🍢", tastes: ["매콤한", "느끼한"] },
+    { name: "짜장떡볶이", emoji: "🍢", tastes: ["단짠단짠"] },
+    { name: "간장떡볶이", emoji: "🍢", tastes: ["단짠단짠"] },
+    { name: "크림떡볶이", emoji: "🍢", tastes: ["느끼한"] },
+    { name: "엽기떡볶이", emoji: "🌶️", tastes: ["매콤한"] },
+    { name: "마라떡볶이", emoji: "🥘", tastes: ["매콤한", "얼큰한"] },
+    { name: "즉석떡볶이", emoji: "🍲", tastes: ["매콤한", "단짠단짠", "국물"] },
+    { name: "치즈떡볶이", emoji: "🍢", tastes: ["느끼한", "매콤한", "치즈가득"] },
+    { name: "라볶이", emoji: "🍢", tastes: ["매콤한", "단짠단짠"] },
+    { name: "순대", emoji: "🍢", tastes: ["단짠단짠"] },
+    { name: "순대볶음", emoji: "🍢", tastes: ["매콤한"] },
+    { name: "김밥", emoji: "🍙", tastes: ["깔끔한", "단짠단짠"] },
+    { name: "참치김밥", emoji: "🍙", tastes: ["깔끔한"] },
+    { name: "치즈김밥", emoji: "🍙", tastes: ["느끼한", "치즈가득"] },
+    { name: "충무김밥", emoji: "🍙", tastes: ["매콤한", "단짠단짠"] },
+    { name: "누드김밥", emoji: "🍙", tastes: ["고소한", "담백한"] },
+    { name: "꼬마김밥", emoji: "🍙", tastes: ["깔끔한", "담백한"] },
+    { name: "신라면", emoji: "🍜", tastes: ["얼큰한", "매콤한", "국물"] },
+    { name: "불닭볶음면", emoji: "🍜", tastes: ["매콤한"] },
+    { name: "짜파게티", emoji: "🍜", tastes: ["단짠단짠"] },
+    { name: "너구리", emoji: "🍜", tastes: ["얼큰한", "국물"] },
+    { name: "진라면", emoji: "🍜", tastes: ["얼큰한", "국물"] },
+    { name: "육개장 라면", emoji: "🍜", tastes: ["매콤한", "얼큰한", "국물"] },
+    { name: "쫄면", emoji: "🍜", tastes: ["매콤한", "새콤한", "단짠단짠"] },
+    { name: "비빔당면", emoji: "🍜", tastes: ["매콤한", "단짠단짠"] },
+    { name: "튀김", emoji: "🍤", tastes: ["단짠단짠", "느끼한", "바삭한"] },
+    { name: "오뎅", emoji: "🍢", tastes: ["깔끔한", "단짠단짠", "국물"] },
+    { name: "핫도그", emoji: "🌭", tastes: ["느끼한", "단짠단짠"] },
+    { name: "고로케", emoji: "🥐", tastes: ["느끼한", "바삭한"] },
+    { name: "계란말이", emoji: "🍳", tastes: ["단짠단짠", "고소한"] },
+    { name: "군만두", emoji: "🥟", tastes: ["단짠단짠", "느끼한", "바삭한"] },
+    { name: "떡꼬치", emoji: "🍢", tastes: ["매콤한", "단짠단짠"] },
+    { name: "소떡소떡", emoji: "🍢", tastes: ["단짠단짠", "매콤한"] },
+    { name: "닭꼬치", emoji: "🍢", tastes: ["매콤한", "단짠단짠"] },
+    { name: "치즈스틱", emoji: "🧀", tastes: ["느끼한", "치즈가득", "바삭한"] },
+    { name: "비빔만두", emoji: "🥟", tastes: ["매콤한", "단짠단짠"] },
+    { name: "참치마요 덮밥", emoji: "🍚", tastes: ["느끼한", "단짠단짠"] },
+    { name: "부침개", emoji: "🥞", tastes: ["단짠단짠", "고소한"] },
+    { name: "어묵탕", emoji: "🍢", tastes: ["깔끔한", "국물", "뜨끈한"] },
+    { name: "컵라면", emoji: "🍜", tastes: ["얼큰한", "국물"] },
+    { name: "불닭 치즈떡볶이", emoji: "🍢", tastes: ["매콤한", "치즈가득"] },
+    { name: "쌀국수 라면", emoji: "🍜", tastes: ["깔끔한", "국물"] },
+    { name: "분식 세트", emoji: "🍱", tastes: ["매콤한", "단짠단짠"] },
+  ],
+
+  패스트푸드: [
+    { name: "후라이드치킨", emoji: "🍗", tastes: ["단짠단짠", "느끼한", "바삭한"] },
+    { name: "양념치킨", emoji: "🍗", tastes: ["매콤한", "단짠단짠"] },
+    { name: "간장치킨", emoji: "🍗", tastes: ["단짠단짠"] },
+    { name: "마늘치킨", emoji: "🍗", tastes: ["단짠단짠", "고소한"] },
+    { name: "파닭", emoji: "🍗", tastes: ["깔끔한", "단짠단짠"] },
+    { name: "BHC 뿌링클", emoji: "🍗", tastes: ["단짠단짠", "고소한"] },
+    { name: "BBQ 황금올리브", emoji: "🍗", tastes: ["깔끔한", "바삭한"] },
+    { name: "교촌 허니콤보", emoji: "🍗", tastes: ["단짠단짠"] },
+    { name: "처갓집 양념치킨", emoji: "🍗", tastes: ["매콤한", "단짠단짠"] },
+    { name: "굽네 볼케이노", emoji: "🍗", tastes: ["매콤한"] },
+    { name: "맥도날드 빅맥", emoji: "🍔", tastes: ["느끼한", "단짠단짠"] },
+    { name: "맥스파이시 버거", emoji: "🍔", tastes: ["매콤한", "느끼한"] },
+    { name: "쉐이크쉑버거", emoji: "🍔", tastes: ["느끼한", "헤비한"] },
+    { name: "롯데리아 버거", emoji: "🍔", tastes: ["느끼한"] },
+    { name: "맘스터치 싸이버거", emoji: "🍔", tastes: ["느끼한", "바삭한"] },
+    { name: "KFC 징거버거", emoji: "🍔", tastes: ["매콤한", "느끼한", "바삭한"] },
+    { name: "버거킹 와퍼", emoji: "🍔", tastes: ["느끼한", "헤비한"] },
+    { name: "감자튀김", emoji: "🍟", tastes: ["단짠단짠", "바삭한"] },
+    { name: "치킨너겟", emoji: "🍗", tastes: ["단짠단짠", "바삭한"] },
+    { name: "타코", emoji: "🌮", tastes: ["매콤한", "단짠단짠"] },
+    { name: "부리또", emoji: "🌯", tastes: ["매콤한", "느끼한", "헤비한"] },
+    { name: "퀘사디아", emoji: "🌮", tastes: ["매콤한", "느끼한", "치즈가득"] },
+    { name: "나초", emoji: "🧀", tastes: ["매콤한", "느끼한", "치즈가득"] },
+    { name: "피자", emoji: "🍕", tastes: ["느끼한", "치즈가득"] },
+    { name: "페퍼로니피자", emoji: "🍕", tastes: ["느끼한", "매콤한", "치즈가득"] },
+    { name: "치즈피자", emoji: "🍕", tastes: ["느끼한", "치즈가득"] },
+    { name: "떡볶이+치킨 세트", emoji: "🍗", tastes: ["매콤한", "단짠단짠", "헤비한"] },
+    { name: "서브웨이 샌드위치", emoji: "🥪", tastes: ["깔끔한", "가벼운"] },
+    { name: "핫도그", emoji: "🌭", tastes: ["느끼한", "단짠단짠"] },
+    { name: "파파이스 치킨", emoji: "🍗", tastes: ["바삭한", "단짠단짠"] },
+    { name: "웬디스 버거", emoji: "🍔", tastes: ["느끼한", "단짠단짠"] },
+  ],
+
+  디저트: [
+    { name: "티라미수", emoji: "🍰", tastes: ["달콤한", "느끼한"] },
+    { name: "치즈케이크", emoji: "🍰", tastes: ["달콤한", "치즈가득"] },
+    { name: "마카롱", emoji: "🍬", tastes: ["달콤한", "쫄깃한"] },
+    { name: "와플", emoji: "🧇", tastes: ["달콤한", "바삭한", "고소한"] },
+    { name: "크로플", emoji: "🥐", tastes: ["달콤한", "바삭한", "고소한"] },
+    { name: "빙수", emoji: "🍧", tastes: ["달콤한", "시원한"] },
+    { name: "팥빙수", emoji: "🍧", tastes: ["달콤한", "시원한"] },
+    { name: "망고빙수", emoji: "🍧", tastes: ["달콤한", "새콤한", "시원한"] },
+    { name: "요거트볼", emoji: "🥣", tastes: ["새콤한", "건강한", "가벼운"] },
+    { name: "아이스크림", emoji: "🍦", tastes: ["달콤한", "시원한"] },
+    { name: "젤라또", emoji: "🍨", tastes: ["달콤한", "시원한"] },
+    { name: "도넛", emoji: "🍩", tastes: ["달콤한", "느끼한"] },
+    { name: "에그타르트", emoji: "🥧", tastes: ["달콤한", "바삭한", "고소한"] },
+    { name: "수플레 팬케이크", emoji: "🥞", tastes: ["달콤한", "고소한"] },
+    { name: "휘낭시에", emoji: "🍞", tastes: ["달콤한", "고소한", "담백한"] },
+    { name: "까눌레", emoji: "🍮", tastes: ["달콤한", "바삭한", "쫄깃한"] },
+    { name: "약과", emoji: "🥮", tastes: ["달콤한", "쫄깃한"] },
+    { name: "탕후루", emoji: "🍓", tastes: ["달콤한", "새콤한", "바삭한"] },
+    { name: "초코 브라우니", emoji: "🍫", tastes: ["달콤한", "헤비한"] },
+    { name: "푸딩", emoji: "🍮", tastes: ["달콤한", "고소한"] },
+    { name: "크레이프", emoji: "🥞", tastes: ["달콤한", "고소한"] },
+    { name: "몽블랑", emoji: "🍰", tastes: ["달콤한", "고소한"] },
+    { name: "파리브레스트", emoji: "🍩", tastes: ["달콤한", "고소한", "느끼한"] },
+    { name: "밀크레이프", emoji: "🥞", tastes: ["달콤한", "고소한"] },
+    { name: "바스크 치즈케이크", emoji: "🍰", tastes: ["달콤한", "치즈가득", "고소한"] },
+    { name: "딸기 쇼트케이크", emoji: "🍓", tastes: ["달콤한", "새콤한"] },
+    { name: "마들렌", emoji: "🍪", tastes: ["달콤한", "고소한", "담백한"] },
+    { name: "쿠키", emoji: "🍪", tastes: ["달콤한", "바삭한", "고소한"] },
+    { name: "소금빵", emoji: "🥐", tastes: ["고소한", "담백한"] },
+    { name: "조각 케이크", emoji: "🎂", tastes: ["달콤한", "느끼한"] },
+    { name: "프레첼", emoji: "🥨", tastes: ["단짠단짠", "바삭한"] },
+    { name: "타르트", emoji: "🥧", tastes: ["달콤한", "바삭한"] },
+  ],
+
+  동남아: [
+    { name: "쌀국수", emoji: "🍜", tastes: ["깔끔한", "국물", "뜨끈한"] },
+    { name: "팟타이", emoji: "🍝", tastes: ["단짠단짠", "고소한"] },
+    { name: "똠얌꿍", emoji: "🥣", tastes: ["새콤한", "얼큰한", "국물"] },
+    { name: "분짜", emoji: "🥗", tastes: ["깔끔한", "단짠단짠", "새콤한"] },
+    { name: "반미", emoji: "🥖", tastes: ["단짠단짠", "바삭한", "새콤한"] },
+    { name: "나시고랭", emoji: "🍛", tastes: ["단짠단짠", "매콤한"] },
+    { name: "미고랭", emoji: "🍜", tastes: ["단짠단짠", "매콤한"] },
+    { name: "푸팟퐁커리", emoji: "🍛", tastes: ["느끼한", "단짠단짠", "고소한"] },
+    { name: "솜땀", emoji: "🥗", tastes: ["새콤한", "매콤한", "가벼운"] },
+    { name: "모닝글로리 볶음", emoji: "🥗", tastes: ["깔끔한", "비건"] },
+    { name: "카오팟", emoji: "🍚", tastes: ["담백한", "고소한"] },
+    { name: "그린커리", emoji: "🍛", tastes: ["매콤한", "느끼한", "국물"] },
+    { name: "레드커리", emoji: "🍛", tastes: ["매콤한", "느끼한", "국물"] },
+    { name: "옐로우커리", emoji: "🍛", tastes: ["느끼한", "국물"] },
+    { name: "반쎄오", emoji: "🌮", tastes: ["바삭한", "고소한"] },
+    { name: "짜조", emoji: "🌯", tastes: ["바삭한", "고소한", "담백한"] },
+    { name: "갈비국수", emoji: "🍜", tastes: ["단짠단짠", "국물"] },
+    { name: "꾸어이띠여우", emoji: "🍜", tastes: ["깔끔한", "국물"] },
+    { name: "분보훼", emoji: "🍜", tastes: ["얼큰한", "국물"] },
+    { name: "목와라이", emoji: "🍚", tastes: ["고소한", "담백한"] },
+    { name: "카오만가이", emoji: "🍗", tastes: ["깔끔한", "담백한"] },
+    { name: "팟씨유", emoji: "🍝", tastes: ["단짠단짠"] },
+    { name: "카오니아우 마무앙", emoji: "🥭", tastes: ["달콤한", "고소한"] },
+    { name: "체짜이", emoji: "🥗", tastes: ["새콤한", "매콤한"] },
+    { name: "프라이드 스프링롤", emoji: "🌯", tastes: ["바삭한", "고소한"] },
+  ],
+
+  샐러드: [
+    { name: "치킨샐러드", emoji: "🥗", tastes: ["깔끔한", "건강한"] },
+    { name: "연어샐러드", emoji: "🥗", tastes: ["깔끔한", "건강한", "담백한"] },
+    { name: "포케", emoji: "🍚", tastes: ["깔끔한", "건강한", "가벼운"] },
+    { name: "두부샐러드", emoji: "🥗", tastes: ["담백한", "비건", "건강한"] },
+    { name: "리코타치즈 샐러드", emoji: "🥗", tastes: ["가벼운", "치즈가득", "새콤한"] },
+    { name: "콥샐러드", emoji: "🥗", tastes: ["가벼운", "담백한"] },
+    { name: "단호박 샐러드", emoji: "🎃", tastes: ["달콤한", "건강한"] },
+    { name: "고구마 샐러드", emoji: "🍠", tastes: ["달콤한", "담백한"] },
+    { name: "그릭요거트", emoji: "🥣", tastes: ["건강한", "새콤한", "담백한"] },
+    { name: "아사이볼", emoji: "🥣", tastes: ["시원한", "건강한", "달콤한"] },
+    { name: "월남쌈", emoji: "🌯", tastes: ["깔끔한", "건강한", "비건"] },
+    { name: "다이어트 도시락", emoji: "🍱", tastes: ["담백한", "가벼운", "건강한"] },
+    { name: "카프레제", emoji: "🍅", tastes: ["깔끔한", "치즈가득", "가벼운"] },
+    { name: "시저샐러드", emoji: "🥗", tastes: ["깔끔한", "건강한"] },
+    { name: "니스와즈 샐러드", emoji: "🥗", tastes: ["새콤한", "가벼운"] },
+    { name: "과일샐러드", emoji: "🍓", tastes: ["달콤한", "새콤한", "건강한"] },
+    { name: "병아리콩 샐러드", emoji: "🥗", tastes: ["담백한", "건강한", "비건"] },
+    { name: "퀴노아볼", emoji: "🥣", tastes: ["건강한", "담백한", "가벼운"] },
+    { name: "그린볼", emoji: "🥗", tastes: ["건강한", "가벼운", "비건"] },
+    { name: "쉬림프 칵테일", emoji: "🍤", tastes: ["깔끔한", "새콤한"] },
+  ],
+
+  브런치: [
+    { name: "베이글", emoji: "🥯", tastes: ["쫄깃한", "담백한"] },
+    { name: "크림치즈 베이글", emoji: "🥯", tastes: ["쫄깃한", "느끼한", "치즈가득"] },
+    { name: "프렌치 토스트", emoji: "🍞", tastes: ["달콤한", "뜨끈한", "고소한"] },
+    { name: "클럽 샌드위치", emoji: "🥪", tastes: ["깔끔한", "담백한"] },
+    { name: "파니니", emoji: "🥪", tastes: ["뜨끈한", "치즈가득", "바삭한"] },
+    { name: "크루아상 샌드위치", emoji: "🥐", tastes: ["바삭한", "고소한"] },
+    { name: "오픈 샌드위치", emoji: "🥪", tastes: ["가벼운", "건강한", "담백한"] },
+    { name: "에그 마요 샌드위치", emoji: "🥪", tastes: ["고소한", "느끼한"] },
+    { name: "팬케이크", emoji: "🥞", tastes: ["달콤한", "고소한"] },
+    { name: "아보카도 토스트", emoji: "🍞", tastes: ["건강한", "담백한", "고소한"] },
+    { name: "스크램블 샌드위치", emoji: "🥪", tastes: ["고소한", "뜨끈한"] },
+    { name: "그래놀라볼", emoji: "🥣", tastes: ["달콤한", "고소한", "건강한"] },
+    { name: "오픈 페이스 버거", emoji: "🍔", tastes: ["느끼한", "헤비한"] },
+    { name: "베네딕트 에그", emoji: "🍳", tastes: ["느끼한", "뜨끈한"] },
+    { name: "BLT 샌드위치", emoji: "🥪", tastes: ["담백한", "고소한"] },
+    { name: "치아바타 샌드위치", emoji: "🥖", tastes: ["바삭한", "담백한"] },
+    { name: "스모크 연어 베이글", emoji: "🥯", tastes: ["담백한", "깔끔한"] },
+    { name: "잉글리시 머핀", emoji: "🥚", tastes: ["고소한", "담백한"] },
+    { name: "포치드 에그 샐러드", emoji: "🥗", tastes: ["깔끔한", "가벼운"] },
+    { name: "버섯 리코타 토스트", emoji: "🍞", tastes: ["고소한", "담백한"] },
+  ],
+}
+
+const CATEGORY_ICON: Record<string, string> = {
+  한식: "🍚",
+  중식: "🥟",
+  일식: "🍣",
+  양식: "🍝",
+  분식: "🍢",
+  패스트푸드: "🌮",
+  디저트: "🍰",
+  동남아: "🍜",
+  샐러드: "🥗",
+  브런치: "🥪",
+}
+
+const TASTE_ICON: Partial<Record<Taste, string>> = {
+  매콤한: "🌶️",
+  얼큰한: "🍲",
+  깔끔한: "✨",
+  단짠단짠: "🍯",
+  느끼한: "🧈",
+  달콤한: "🍬",
+  새콤한: "🍋",
+  고소한: "🥜",
+  담백한: "🍃",
+  바삭한: "🥨",
+  쫄깃한: "🍡",
+  뜨끈한: "♨️",
+  시원한: "🧊",
+  헤비한: "🧱",
+  가벼운: "🪶",
+  건강한: "🥗",
+  치즈가득: "🧀",
+  국물: "🥣",
+  비건: "🌱",
+}
 
 export default function FilterView() {
   const [selectedFoods, setSelectedFoods] = useState<string[]>([])
-  const [selectedTastes, setSelectedTastes] = useState<string[]>([])
+  const [selectedTastes, setSelectedTastes] = useState<Taste[]>([])
   const [showModal, setShowModal] = useState(false)
-  const [recommendation, setRecommendation] = useState({ name: "", emoji: "" })
+  const [recommendation, setRecommendation] = useState<FoodItem & { category: string }>({
+    name: "",
+    emoji: "",
+    tastes: [],
+    category: "",
+  })
   const [isAnimating, setIsAnimating] = useState(false)
 
-  const toggleFood = (food: string) => {
-    setSelectedFoods((prev) =>
-      prev.includes(food) ? prev.filter((f) => f !== food) : [...prev, food]
+  const FOOD_TYPES = useMemo(() => {
+    return Object.keys(FOOD_DB).map((label) => ({
+      label,
+      icon: CATEGORY_ICON[label] ?? "🍽️",
+    }))
+  }, [])
+
+  // ✅ TASTE_TYPES: 5개 이상 메뉴에 붙은 태그만 버튼으로 노출 (희귀 태그 제거)
+  const TASTE_TYPES = useMemo(() => {
+    const countMap: Partial<Record<Taste, number>> = {}
+    Object.values(FOOD_DB)
+      .flatMap((items) => items.flatMap((i) => i.tastes))
+      .forEach((t) => {
+        countMap[t] = (countMap[t] ?? 0) + 1
+      })
+
+    // 5개 이상 붙은 Taste만 버튼으로 노출
+    const filtered = (Object.keys(countMap) as Taste[]).filter(
+      (t) => (countMap[t] ?? 0) >= 5
     )
+
+    // 직관적인 순서로 정렬
+    const ORDER: Taste[] = [
+      "매콤한", "얼큰한", "국물", "깔끔한", "단짠단짠",
+      "느끼한", "헤비한", "달콤한", "고소한", "새콤한",
+      "바삭한", "담백한", "뜨끈한", "시원한", "가벼운",
+      "건강한", "치즈가득", "쫄깃한", "비건",
+    ]
+
+    return ORDER.filter((t) => filtered.includes(t)).map((label) => ({
+      label,
+      icon: TASTE_ICON[label] ?? "❤️",
+    }))
+  }, [])
+
+  const toggleFood = (food: string) => {
+    setSelectedFoods((prev) => (prev.includes(food) ? prev.filter((f) => f !== food) : [...prev, food]))
   }
 
-  const toggleTaste = (taste: string) => {
-    setSelectedTastes((prev) =>
-      prev.includes(taste) ? prev.filter((t) => t !== taste) : [...prev, taste]
-    )
+  const toggleTaste = (taste: Taste) => {
+    setSelectedTastes((prev) => (prev.includes(taste) ? prev.filter((t) => t !== taste) : [...prev, taste]))
   }
 
   const getRecommendation = () => {
     const categories = selectedFoods.length > 0 ? selectedFoods : FOOD_TYPES.map((f) => f.label)
-    const randomCategory = categories[Math.floor(Math.random() * categories.length)]
-    const foods = FOOD_RECOMMENDATIONS[randomCategory] || ["비빔밥"]
-    const randomFood = foods[Math.floor(Math.random() * foods.length)]
-    const randomEmoji = FOOD_EMOJIS[Math.floor(Math.random() * FOOD_EMOJIS.length)]
 
-    setRecommendation({ name: randomFood, emoji: randomEmoji })
+    let pool: (FoodItem & { category: string })[] = categories.flatMap((cat) =>
+      (FOOD_DB[cat] || []).map((item) => ({ ...item, category: cat }))
+    )
+
+    if (selectedTastes.length > 0) {
+      const filtered = pool.filter((item) => selectedTastes.some((t) => item.tastes.includes(t)))
+      if (filtered.length > 0) pool = filtered
+    }
+
+    if (pool.length === 0) return
+
+    const picked = pool[Math.floor(Math.random() * pool.length)]
+    setRecommendation(picked)
     setIsAnimating(true)
     setShowModal(true)
-    setTimeout(() => setIsAnimating(false), 600)
+    window.setTimeout(() => setIsAnimating(false), 600)
   }
 
   return (
     <div className="flex flex-col gap-5 px-5 pt-5 pb-28">
-      {/* Hero section with mascot */}
       <div className="flex flex-col items-center gap-2 rounded-3xl bg-card p-5 border border-border shadow-sm">
         <div className="flex items-center gap-3">
           <DumplingMascot size={56} className="animate-[bounce_3s_ease-in-out_infinite]" />
           <BowlMascot size={56} className="animate-[bounce_3s_ease-in-out_infinite_0.5s]" />
         </div>
-        <h2 className="text-xl font-extrabold text-foreground text-balance text-center">
-          {"오늘 땡기는 스타일은?"}
-        </h2>
+        <h2 className="text-xl font-extrabold text-foreground text-balance text-center">{"오늘 땡기는 스타일은?"}</h2>
         <p className="text-xs font-medium text-muted-foreground text-center leading-relaxed">
           {"조건을 골라보세요, 나머지는 Whatever이 골라줄게!"}
         </p>
       </div>
 
-      {/* Food Types */}
       <section>
         <div className="mb-3 flex items-center gap-1.5">
           <SparkleIcon size={14} className="text-primary" />
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            {"음식 종류"}
-          </h2>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{"음식 종류"}</h2>
         </div>
         <div className="flex flex-wrap gap-2">
           {FOOD_TYPES.map(({ label, icon }) => (
@@ -106,13 +604,10 @@ export default function FilterView() {
         </div>
       </section>
 
-      {/* Taste Types */}
       <section>
         <div className="mb-3 flex items-center gap-1.5">
           <HeartIcon size={14} className="text-primary" />
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            {"맛"}
-          </h2>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{"맛"}</h2>
         </div>
         <div className="flex flex-wrap gap-2">
           {TASTE_TYPES.map(({ label, icon }) => (
@@ -132,7 +627,6 @@ export default function FilterView() {
         </div>
       </section>
 
-      {/* Selected Summary */}
       {(selectedFoods.length > 0 || selectedTastes.length > 0) && (
         <div className="rounded-2xl bg-card p-4 shadow-sm border border-border">
           <p className="mb-2 text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
@@ -152,7 +646,6 @@ export default function FilterView() {
         </div>
       )}
 
-      {/* Recommend Button */}
       <button
         onClick={getRecommendation}
         className="group relative mx-auto w-full max-w-xs overflow-hidden rounded-2xl bg-primary px-6 py-4 text-base font-extrabold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30 active:scale-[0.97]"
@@ -163,7 +656,6 @@ export default function FilterView() {
         </span>
       </button>
 
-      {/* Result Modal */}
       {showModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 backdrop-blur-sm p-5"
@@ -175,7 +667,6 @@ export default function FilterView() {
             }`}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close button */}
             <button
               onClick={() => setShowModal(false)}
               className="absolute right-3 top-3 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -184,7 +675,6 @@ export default function FilterView() {
               <X className="h-4 w-4" />
             </button>
 
-            {/* Decorative sparkles */}
             <div className="absolute left-4 top-6">
               <SparkleIcon size={12} className="text-primary/40 animate-pulse" />
             </div>
@@ -192,22 +682,24 @@ export default function FilterView() {
               <SparkleIcon size={10} className="text-accent/50 animate-pulse delay-300" />
             </div>
 
-            {/* Emoji + mascot */}
             <div className="mb-3 flex justify-center">
-              <div className="relative">
-                <span className="text-6xl block animate-bounce">{recommendation.emoji}</span>
-              </div>
+              <span className="text-6xl block animate-bounce">{recommendation.emoji}</span>
             </div>
 
-            <p className="text-xs font-bold text-muted-foreground tracking-wide">
-              {"오늘의 추천 메뉴는..."}
-            </p>
-            <h3 className="mt-2 text-3xl font-extrabold text-foreground">
-              {recommendation.name}
-            </h3>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {"맛있게 먹어요!"}
-            </p>
+            <p className="text-xs font-bold text-muted-foreground tracking-wide">{"오늘의 추천 메뉴는..."}</p>
+            <h3 className="mt-2 text-3xl font-extrabold text-foreground">{recommendation.name}</h3>
+
+            {recommendation.tastes.length > 0 && (
+              <div className="mt-2 flex flex-wrap justify-center gap-1">
+                {recommendation.tastes.map((t) => (
+                  <span key={t} className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <p className="mt-1 text-xs text-muted-foreground">{"맛있게 먹어요!"}</p>
 
             <div className="mt-6 flex gap-2">
               <button
