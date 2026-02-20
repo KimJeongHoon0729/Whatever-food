@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useState, useEffect, useRef } from "react"
 import { X, RotateCw, CheckCircle2 } from "lucide-react"
 import { DumplingMascot, BowlMascot, SparkleIcon, HeartIcon } from "@/components/cute-mascots"
 
@@ -517,6 +517,7 @@ export default function FilterView({
   const [isAnimating, setIsAnimating] = useState(false)
   const [isRevealing, setIsRevealing] = useState(false)
   const [rollingText, setRollingText] = useState("")
+  const btnRef = useRef<HTMLDivElement>(null)
   const [addedToRoulette, setAddedToRoulette] = useState<string | null>(null)
   const [fromRouletteBanner, setFromRouletteBanner] = useState<string | null>(null)
 
@@ -578,10 +579,12 @@ export default function FilterView({
 
   const toggleFood = (food: string) => {
     setSelectedFoods((prev) => (prev.includes(food) ? prev.filter((f) => f !== food) : [...prev, food]))
+    btnRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
   }
 
   const toggleTaste = (taste: Taste) => {
     setSelectedTastes((prev) => (prev.includes(taste) ? prev.filter((t) => t !== taste) : [...prev, taste]))
+    btnRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
   }
 
   // 현재 조건(카테고리 + 맛)으로 나올 수 있는 총 메뉴 수
@@ -751,7 +754,7 @@ export default function FilterView({
         </div>
       )}
 
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-col items-center gap-2" ref={btnRef}>
         <p className="text-xs font-bold text-muted-foreground tabular-nums">
           <span className="text-primary font-extrabold">{matchCount}개</span>{"의 메뉴 중에서 골라줄게요"}
         </p>
