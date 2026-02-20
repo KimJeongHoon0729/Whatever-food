@@ -295,7 +295,7 @@ export default function RouletteView({ foods, onFoodsChange, onGoToFilter }: Rou
         ))}
         <button
           onClick={() => setCheckedFoods(new Set(foods))}
-          className="flex-1 rounded-2xl border-2 border-primary/20 bg-primary/5 px-3 py-2.5 text-xs font-bold text-primary transition-all hover:bg-primary/10 active:scale-95"
+          className="flex-1 shrink-0 rounded-2xl border-2 border-primary/20 bg-primary/5 px-3 py-2.5 text-xs font-bold text-primary transition-all hover:bg-primary/10 active:scale-95 whitespace-nowrap"
         >
           {"전체 선택"}
         </button>
