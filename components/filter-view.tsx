@@ -616,8 +616,9 @@ export default function FilterView({
     return pool.length
   }, [selectedFoods, selectedTastes, FOOD_TYPES])
 
-  // 특정 맛 태그를 추가했을 때의 예상 메뉴 수 (미리보기용)
-  // 각 맛 태그별 예상 메뉴 수 — selectedFoods/selectedTastes 바뀔 때마다 재계산
+  // 각 맛 버튼에 표시할 수량: "현재 종류 안에서 이 맛이 반영된 메뉴 수"
+  // - 맛 미선택 시: 해당 맛이 붙은 메뉴 수
+  // - 맛 선택 시(해당 버튼 포함): 현재 선택한 맛 조건에 맞는 메뉴 수 (종류 전체 X)
   const tasteCountMap = useMemo(() => {
     const categories = selectedFoods.length > 0 ? selectedFoods : FOOD_TYPES.map((f) => f.label)
     const pool = categories.flatMap((cat) => FOOD_DB[cat] || [])
@@ -627,7 +628,11 @@ export default function FilterView({
         ? selectedTastes.filter((t) => t !== taste)
         : [...selectedTastes, taste]
       if (nextTastes.length === 0) {
-        map[taste] = pool.length
+        // 선택된 맛을 뺐을 때 조건 없음 → 이 버튼은 "현재 선택된 맛"이므로, 현재 조건에 맞는 수 표시
+        const currentMatch = pool.filter((item) =>
+          selectedTastes.some((t) => item.tastes.includes(t))
+        )
+        map[taste] = currentMatch.length > 0 ? currentMatch.length : pool.length
       } else {
         const filtered = pool.filter((item) => nextTastes.some((t) => item.tastes.includes(t)))
         map[taste] = filtered.length > 0 ? filtered.length : pool.length

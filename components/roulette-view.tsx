@@ -6,6 +6,17 @@ import { TacoMascot, SparkleIcon, HeartIcon } from "@/components/cute-mascots"
 
 const STORAGE_KEY = "whatever-roulette-foods"
 
+const DEFAULT_FOODS = [
+  "김치찌개",
+  "짜장면",
+  "초밥",
+  "파스타",
+  "떡볶이",
+  "치킨",
+  "비빔밥",
+  "라멘",
+]
+
 const WHEEL_COLORS = [
   "#F5B7B1", // soft pink
   "#FDEBD0", // cream
@@ -36,13 +47,13 @@ function loadFromStorage(): { foods: string[]; checkedFoods: string[] } | null {
       ? (storedChecked as unknown[]).filter((c): c is string => typeof c === "string")
       : []
     const checkedFiltered = foodsList.length > 0 ? checkedList.filter((c) => foodsList.includes(c)) : []
-    const finalFoods = foodsList
+    const finalFoods = foodsList.length > 0 ? foodsList : DEFAULT_FOODS
     const finalChecked =
       foodsList.length > 0
         ? checkedFiltered.length > 0
           ? checkedFiltered
           : foodsList
-        : []
+        : DEFAULT_FOODS
     return { foods: finalFoods, checkedFoods: finalChecked }
   } catch {
     return null
@@ -61,6 +72,7 @@ export default function RouletteView({ foods, onFoodsChange, onGoToFilter }: Rou
   const [isSpinning, setIsSpinning] = useState(false)
   const [rotation, setRotation] = useState(0)
   const [winner, setWinner] = useState<string | null>(null)
+  const [isSelecting, setIsSelecting] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // foods prop이 바뀌면 (필터에서 추가) checkedFoods에 새 항목 자동 체크
@@ -148,7 +160,7 @@ export default function RouletteView({ foods, onFoodsChange, onGoToFilter }: Rou
       <div className="flex flex-col items-center gap-2 rounded-3xl bg-card p-5 border border-border shadow-sm">
         <TacoMascot size={52} className="animate-[bounce_3s_ease-in-out_infinite]" />
         <h2 className="text-xl font-extrabold text-foreground">
-          {"룰렛 돌리기"}
+          {"내 맛집 룰렛"}
         </h2>
         <p className="text-xs font-medium text-muted-foreground text-center">
           {"고민 끝! 돌려서 정하자!"}
@@ -222,22 +234,20 @@ export default function RouletteView({ foods, onFoodsChange, onGoToFilter }: Rou
           )}
         </div>
 
-        {/* Spin button - center (2개 이상일 때만 표시, "메뉴를 추가해주세요"와 겹침 방지) */}
-        {activeFoods.length >= 2 && (
-          <button
-            onClick={spinWheel}
-            disabled={isSpinning}
-            className="absolute z-10 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 font-extrabold text-xs transition-all hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSpinning ? (
-              <span className="animate-spin">
-                <SparkleIcon size={20} />
-              </span>
-            ) : (
-              "SPIN!"
-            )}
-          </button>
-        )}
+        {/* Spin button - center */}
+        <button
+          onClick={spinWheel}
+          disabled={activeFoods.length < 2 || isSpinning}
+          className="absolute z-10 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 font-extrabold text-xs transition-all hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isSpinning ? (
+            <span className="animate-spin">
+              <SparkleIcon size={20} />
+            </span>
+          ) : (
+            "SPIN!"
+          )}
+        </button>
       </div>
 
       {/* Winner Display */}
@@ -289,19 +299,47 @@ export default function RouletteView({ foods, onFoodsChange, onGoToFilter }: Rou
         {[3, 5, 7].map((n) => (
           <button
             key={n}
-            onClick={() => randomSelect(n)}
+            onClick={() => { randomSelect(n); setIsSelecting(false) }}
             className="flex-1 rounded-2xl border-2 border-border bg-card px-3 py-2.5 text-xs font-bold text-card-foreground transition-all hover:border-primary/30 hover:bg-muted active:scale-95"
           >
             {`랜덤 ${n}개`}
           </button>
         ))}
         <button
-          onClick={() => setCheckedFoods(new Set(foods))}
-          className="flex-1 shrink-0 rounded-2xl border-2 border-primary/20 bg-primary/5 px-3 py-2.5 text-xs font-bold text-primary transition-all hover:bg-primary/10 active:scale-95 whitespace-nowrap"
+          onClick={() => { setCheckedFoods(new Set(foods)); setIsSelecting(false) }}
+          className="flex-1 rounded-2xl border-2 border-primary/20 bg-primary/5 px-3 py-2.5 text-xs font-bold text-primary transition-all hover:bg-primary/10 active:scale-95"
         >
           {"전체 선택"}
         </button>
       </div>
+
+      {/* 직접 선택 */}
+      <button
+        onClick={() => {
+          if (!isSelecting) {
+            setCheckedFoods(new Set()) // 전체 해제 후 직접 고르기
+          } else {
+            if (checkedFoods.size === 0) setCheckedFoods(new Set(foods)) // 아무것도 안 골랐으면 전체 복구
+          }
+          setIsSelecting((v) => !v)
+        }}
+        className={`w-full rounded-2xl border-2 px-3 py-2.5 text-xs font-bold transition-all active:scale-95 ${
+          isSelecting
+            ? "border-accent bg-accent text-accent-foreground"
+            : "border-border bg-card text-card-foreground hover:border-accent/40 hover:bg-muted"
+        }`}
+      >
+        {isSelecting ? "✓ 선택 완료" : "✋ 직접 선택하기"}
+      </button>
+
+      {/* 직접 선택 모드 안내 */}
+      {isSelecting && (
+        <div className="animate-in fade-in-0 slide-in-from-top-1 duration-200 rounded-2xl border border-accent/30 bg-accent/10 px-4 py-2.5 text-xs font-medium text-accent-foreground">
+          {"원하는 메뉴만 탭해서 골라보세요 👇 "}
+          <span className="font-extrabold text-accent-foreground">{checkedFoods.size}개</span>
+          {" 선택됨"}
+        </div>
+      )}
 
       {/* Food List */}
       <div className="flex flex-col gap-1.5">
@@ -312,7 +350,14 @@ export default function RouletteView({ foods, onFoodsChange, onGoToFilter }: Rou
         {foods.map((food) => (
           <div
             key={food}
-            className="flex items-center gap-3 rounded-2xl bg-card px-4 py-3 border border-border transition-colors hover:bg-muted"
+            onClick={() => isSelecting && toggleCheck(food)}
+            className={`flex items-center gap-3 rounded-2xl bg-card px-4 py-3 border transition-colors ${
+              isSelecting
+                ? checkedFoods.has(food)
+                  ? "border-accent bg-accent/10 cursor-pointer"
+                  : "border-border cursor-pointer hover:border-accent/40 hover:bg-muted"
+                : "border-border hover:bg-muted"
+            }`}
           >
             <label className="flex flex-1 cursor-pointer items-center gap-3">
               <div className="relative flex items-center justify-center">
