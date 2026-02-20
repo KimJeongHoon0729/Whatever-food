@@ -617,16 +617,26 @@ export default function FilterView({
   }, [selectedFoods, selectedTastes, FOOD_TYPES])
 
   // 특정 맛 태그를 추가했을 때의 예상 메뉴 수 (미리보기용)
-  const getCountWithTaste = (taste: Taste): number => {
+  // 각 맛 태그별 예상 메뉴 수 — selectedFoods/selectedTastes 바뀔 때마다 재계산
+  const tasteCountMap = useMemo(() => {
     const categories = selectedFoods.length > 0 ? selectedFoods : FOOD_TYPES.map((f) => f.label)
     const pool = categories.flatMap((cat) => FOOD_DB[cat] || [])
-    const nextTastes = selectedTastes.includes(taste)
-      ? selectedTastes.filter((t) => t !== taste)
-      : [...selectedTastes, taste]
-    if (nextTastes.length === 0) return pool.length
-    const filtered = pool.filter((item) => nextTastes.some((t) => item.tastes.includes(t)))
-    return filtered.length > 0 ? filtered.length : pool.length
-  }
+    const map: Partial<Record<Taste, number>> = {}
+    for (const taste of Object.keys(TASTE_ICON) as Taste[]) {
+      const nextTastes = selectedTastes.includes(taste)
+        ? selectedTastes.filter((t) => t !== taste)
+        : [...selectedTastes, taste]
+      if (nextTastes.length === 0) {
+        map[taste] = pool.length
+      } else {
+        const filtered = pool.filter((item) => nextTastes.some((t) => item.tastes.includes(t)))
+        map[taste] = filtered.length > 0 ? filtered.length : pool.length
+      }
+    }
+    return map
+  }, [selectedFoods, selectedTastes, FOOD_TYPES])
+
+  const getCountWithTaste = (taste: Taste): number => tasteCountMap[taste] ?? 0
 
   const getRecommendation = () => {
     const categories = selectedFoods.length > 0 ? selectedFoods : FOOD_TYPES.map((f) => f.label)
