@@ -628,14 +628,15 @@ export default function FilterView({
         ? selectedTastes.filter((t) => t !== taste)
         : [...selectedTastes, taste]
       if (nextTastes.length === 0) {
-        // 선택된 맛을 뺐을 때 조건 없음 → 이 버튼은 "현재 선택된 맛"이므로, 현재 조건에 맞는 수 표시
+        // 선택된 맛 버튼: 현재 선택한 맛 조건에 맞는 메뉴 수
         const currentMatch = pool.filter((item) =>
           selectedTastes.some((t) => item.tastes.includes(t))
         )
-        map[taste] = currentMatch.length > 0 ? currentMatch.length : pool.length
+        map[taste] = currentMatch.length
       } else {
+        // 미선택 맛 버튼: 이 맛이 붙은 메뉴 수 (현재 종류 풀 기준). 없으면 0
         const filtered = pool.filter((item) => nextTastes.some((t) => item.tastes.includes(t)))
-        map[taste] = filtered.length > 0 ? filtered.length : pool.length
+        map[taste] = filtered.length
       }
     }
     return map

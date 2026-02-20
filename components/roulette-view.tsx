@@ -234,20 +234,22 @@ export default function RouletteView({ foods, onFoodsChange, onGoToFilter }: Rou
           )}
         </div>
 
-        {/* Spin button - center */}
-        <button
-          onClick={spinWheel}
-          disabled={activeFoods.length < 2 || isSpinning}
-          className="absolute z-10 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 font-extrabold text-xs transition-all hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isSpinning ? (
-            <span className="animate-spin">
-              <SparkleIcon size={20} />
-            </span>
-          ) : (
-            "SPIN!"
-          )}
-        </button>
+        {/* Spin button - 2개 이상일 때만 표시 (메뉴를 추가해주세요와 겹침 방지) */}
+        {activeFoods.length >= 2 && (
+          <button
+            onClick={spinWheel}
+            disabled={isSpinning}
+            className="absolute z-10 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 font-extrabold text-xs transition-all hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSpinning ? (
+              <span className="animate-spin">
+                <SparkleIcon size={20} />
+              </span>
+            ) : (
+              "SPIN!"
+            )}
+          </button>
+        )}
       </div>
 
       {/* Winner Display */}
